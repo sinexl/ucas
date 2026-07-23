@@ -7,7 +7,7 @@ trait AssociativeList {
     /// Main constructor. This should (if applicable):
     /// - Perform flattening (AssociativeList::flatten())
     /// - Remove Identities
-    /// - Propagate Constants
+    /// - Propagate Constants (AssociativeList::propagate_constants())
     /// - Ensure that length of list > 1
     fn from_items(items: &[Node]) -> Node;
     fn items(&self) -> &[Node];
@@ -32,6 +32,30 @@ trait AssociativeList {
     fn symbol(&self) -> &'static str;
 }
 
+// I decided to not put this implementation into AssociativeList because that would require also
+// adding .action(f32, f32) to the interface.
+fn propagate_constants_generic(items: &mut Vec<Node>, action: impl Fn(f32, f32) -> f32) {
+    let mut constant = None;
+    let mut out = Vec::new();
+
+    for i in items.drain(..) {
+        match i {
+            Node::Float(x) => {
+                constant = Some(match constant {
+                    None => x,
+                    Some(c) => action(c, x),
+                })
+            }
+            other => out.push(other),
+        }
+    }
+
+    if let Some(c) = constant {
+        // TODO: for now, i insert constants at the start until the ordering is implemented
+        out.insert(0, Node::Float(c));
+    }
+    *items = out;
+}
 impl AssociativeList for Addition {
     fn from_items(items: &[Node]) -> Node {
         let mut this = Self {
@@ -39,11 +63,12 @@ impl AssociativeList for Addition {
         };
         this.flatten();
 
-
         // Clearing identities
         let mut i = 0;
         while i < this.items.len() {
-            if let Node::Float(x) = this.items[i] && x == 0.0  {
+            if let Node::Float(x) = this.items[i]
+                && x == 0.0
+            {
                 this.items.remove(i);
             } else {
                 i += 1;
@@ -51,7 +76,6 @@ impl AssociativeList for Addition {
         }
 
         this.propagate_constants();
-
 
         // TODO: Canonicalization: Ordering
         if this.items.len() == 0 {
@@ -79,7 +103,7 @@ impl AssociativeList for Addition {
                 Node::Multiplication(other) => {
                     other.flatten();
                     new_items.push(i.clone())
-                },
+                }
                 Node::Float(_) | Node::Variable(_) => {
                     new_items.push(i.clone());
                 }
@@ -89,22 +113,7 @@ impl AssociativeList for Addition {
     }
 
     fn propagate_constants(&mut self) {
-        for i in 0..self.items.len() {
-            let mut j = i + 1;
-            while j < self.items.len() {
-                let mut j_removed = false;
-                if let (Node::Float(a), Node::Float(b)) = (&self.items[i], &self.items[j]) {
-                    self.items[i] = Node::Float(a + b);
-
-                    self.items.remove(j);
-                    j_removed = true;
-                }
-
-                if !j_removed {
-                    j += 1;
-                }
-            }
-        }
+        propagate_constants_generic(&mut self.items, |a, b| a + b);
     }
 
     fn simplify(&self) -> Node {
@@ -113,7 +122,8 @@ impl AssociativeList for Addition {
             items[i] = simplify(&items[i]);
         }
 
-        for i in 0..items.len() {
+        let mut i = 0;
+        while i < items.len() {
             let mut j = i + 1;
             while j < items.len() {
                 let mut j_removed = false;
@@ -143,6 +153,7 @@ impl AssociativeList for Addition {
                     j += 1;
                 }
             }
+            i += 1;
         }
 
         Self::from_items(items.as_slice())
@@ -155,22 +166,54 @@ impl AssociativeList for Addition {
 
 impl AssociativeList for Multiplication {
     fn from_items(items: &[Node]) -> Node {
-        // TODO: Canonicalization
-        Node::Multiplication(Multiplication {
+        let mut this = Self {
             items: items.to_vec(),
-        })
+        };
+
+        this.flatten();
+
+        // Clearing identities
+        let mut i = 0;
+        while i < this.items.len() {
+            let mut i_removed = false;
+            if let Node::Float(x) = this.items[i] {
+                if x == 1.0 {
+                    this.items.remove(i);
+                    i_removed = true;
+                }
+                if x == 0.0 {
+                    return Node::Float(0.0);
+                }
+            }
+
+            if !i_removed {
+                i += 1;
+            }
+        }
+
+        this.propagate_constants();
+
+        // TODO: Canonicalization: Ordering
+        if this.items.len() == 0 {
+            return Node::Float(1.0);
+        }
+        if this.items.len() == 1 {
+            return this.items[0].clone();
+        }
+
+        Node::Multiplication(this)
     }
 
     fn items(&self) -> &[Node] {
         self.items.as_slice()
     }
 
-    fn flatten(&mut self)  {
+    fn flatten(&mut self) {
         // todo!()
     }
 
     fn propagate_constants(&mut self) {
-        // todo!()
+        propagate_constants_generic(&mut self.items, |a, b| a * b);
     }
 
     fn simplify(&self) -> Node {
