@@ -1,32 +1,20 @@
+mod ast;
+
+use crate::ast::node::{Addition, Multiplication, Node};
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone)]
-enum Node {
-    Float(f32),
-    Variable(String),
-
-    Addition(Addition),
-    Multiplication(Multiplication),
-}
-
-#[derive(Clone)]
-struct Addition {
-    items: Vec<Node>,
-}
-
-#[derive(Clone)]
-struct Multiplication {
-    items: Vec<Node>,
-}
-
 trait AssociativeList {
-    fn symbol(&self) -> &'static str;
+    /// Main constructor. This should (if applicable):
+    /// - Perform flattening (AssociativeList::flatten())
+    /// - Remove Identities
+    /// - Propagate Constants
+    /// - Ensure that length of list > 1
     fn from_items(items: &[Node]) -> Node;
     fn items(&self) -> &[Node];
 
-    fn flatten_associative(&self) -> Vec<Node>;
-
-    fn simplify_associative(&self) -> Node;
+    fn flatten(&mut self);
+    fn propagate_constants(&mut self);
+    fn simplify(&self) -> Node;
 
     fn fmt_associative(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let symbol = self.symbol();
@@ -41,39 +29,86 @@ trait AssociativeList {
         write!(f, ")")?;
         Ok(())
     }
+    fn symbol(&self) -> &'static str;
 }
 
 impl AssociativeList for Addition {
-    fn symbol(&self) -> &'static str {
-        "+"
-    }
-
     fn from_items(items: &[Node]) -> Node {
-        Node::addition(items.to_vec())
+        let mut this = Self {
+            items: items.to_vec(),
+        };
+        this.flatten();
+
+
+        // Clearing identities
+        let mut i = 0;
+        while i < this.items.len() {
+            if let Node::Float(x) = this.items[i] && x == 0.0  {
+                this.items.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+
+        this.propagate_constants();
+
+
+        // TODO: Canonicalization: Ordering
+        if this.items.len() == 0 {
+            return Node::Float(0.0);
+        }
+        if this.items.len() == 1 {
+            return this.items[0].clone();
+        }
+
+        Node::Addition(this)
     }
 
     fn items(&self) -> &[Node] {
         self.items.as_slice()
     }
 
-    fn flatten_associative(&self) -> Vec<Node> {
-        let mut new_list: Vec<Node> = Vec::new();
-        for i in &self.items {
+    fn flatten(&mut self) {
+        let mut new_items = Vec::new();
+        for i in &mut self.items {
             match i {
                 Node::Addition(other) => {
-                    let mut other = other.flatten_associative();
-                    new_list.append(&mut other);
+                    other.flatten();
+                    new_items.append(&mut other.items)
                 }
-                Node::Float(_) | Node::Variable(_) | Node::Multiplication(_) => {
-                    new_list.push(i.clone());
+                Node::Multiplication(other) => {
+                    other.flatten();
+                    new_items.push(i.clone())
+                },
+                Node::Float(_) | Node::Variable(_) => {
+                    new_items.push(i.clone());
                 }
             }
         }
-        new_list
+        self.items = new_items;
     }
 
-    fn simplify_associative(&self) -> Node {
-        let mut items = self.flatten_associative().to_vec();
+    fn propagate_constants(&mut self) {
+        for i in 0..self.items.len() {
+            let mut j = i + 1;
+            while j < self.items.len() {
+                let mut j_removed = false;
+                if let (Node::Float(a), Node::Float(b)) = (&self.items[i], &self.items[j]) {
+                    self.items[i] = Node::Float(a + b);
+
+                    self.items.remove(j);
+                    j_removed = true;
+                }
+
+                if !j_removed {
+                    j += 1;
+                }
+            }
+        }
+    }
+
+    fn simplify(&self) -> Node {
+        let mut items = self.items.clone();
         for i in 0..items.len() {
             items[i] = simplify(&items[i]);
         }
@@ -81,36 +116,30 @@ impl AssociativeList for Addition {
         for i in 0..items.len() {
             let mut j = i + 1;
             while j < items.len() {
-                let mut removed = false;
+                let mut j_removed = false;
                 match (&items[i], &items[j]) {
-                    (Node::Float(a), Node::Float(b)) => {
-                        items[i] = Node::Float(a + b);
-                        items.remove(j);
-                        removed = true;
-                    }
                     (
                         Node::Variable(this_name),
                         Node::Multiplication(Multiplication {
                             items: multiplicands,
                         }),
                     ) => {
-                        // TODO: Ensure that items.len() >= 2 for Addition and multiplication
                         if let Node::Variable(other_name) = &multiplicands[1]
                             && *other_name == *this_name
                         {
                             // x + nx = ((1 + n)*x)
-                            items[i] = Node::multiplication(vec![
+                            items[i] = Multiplication::from_items(&[
                                 simplify(&addition![Node::Float(1.0), multiplicands[0].clone()]),
                                 Node::Variable(this_name.clone()),
                             ]);
 
                             items.remove(j);
-                            removed = true;
+                            j_removed = true;
                         }
                     }
                     _ => {}
                 }
-                if !removed {
+                if !j_removed {
                     j += 1;
                 }
             }
@@ -118,14 +147,15 @@ impl AssociativeList for Addition {
 
         Self::from_items(items.as_slice())
     }
+
+    fn symbol(&self) -> &'static str {
+        "+"
+    }
 }
 
 impl AssociativeList for Multiplication {
-    fn symbol(&self) -> &'static str {
-        "*"
-    }
-
     fn from_items(items: &[Node]) -> Node {
+        // TODO: Canonicalization
         Node::Multiplication(Multiplication {
             items: items.to_vec(),
         })
@@ -135,30 +165,28 @@ impl AssociativeList for Multiplication {
         self.items.as_slice()
     }
 
-    fn flatten_associative(&self) -> Vec<Node> {
+    fn flatten(&mut self)  {
         // todo!()
-        self.items.clone()
     }
 
-    fn simplify_associative(&self) -> Node {
+    fn propagate_constants(&mut self) {
+        // todo!()
+    }
+
+    fn simplify(&self) -> Node {
         // todo!()
         Node::Multiplication(self.clone())
     }
-}
 
-impl Node {
-    fn addition(items: Vec<Node>) -> Node {
-        Node::Addition(Addition { items })
-    }
-    fn multiplication(items: Vec<Node>) -> Node {
-        Node::Multiplication(Multiplication { items })
+    fn symbol(&self) -> &'static str {
+        "*"
     }
 }
 
 fn simplify(expr: &Node) -> Node {
     match expr {
-        Node::Addition(addition) => addition.simplify_associative(),
-        Node::Multiplication(multiplication) => multiplication.simplify_associative(),
+        Node::Addition(addition) => addition.simplify(),
+        Node::Multiplication(multiplication) => multiplication.simplify(),
         Node::Float(_) => expr.clone(),
         Node::Variable(_) => expr.clone(),
     }
@@ -190,14 +218,14 @@ mod shortcuts {
     #[macro_export]
     macro_rules! addition {
         {$($x:expr),+ $(,)?} => {
-            Node::addition(vec![$($x, )+])
+            Addition::from_items(&[$($x, )+])
         }
     }
 
     #[macro_export]
     macro_rules! multiplication {
         {$($x:expr),+ $(,)?} => {
-            Node::multiplication(vec![$($x, )+])
+            Multiplication::from_items(&[$($x, )+])
         }
     }
 }
