@@ -1,5 +1,6 @@
 #[derive(Clone)]
 pub enum Node {
+    // TODO: For now, f32 are used. In future, i plan to use arbitrary precision rational numbers
     Float(f32),
     Variable(String),
 
