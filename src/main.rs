@@ -6,19 +6,39 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
 trait AssociativeList {
-    /// Main constructor. This should (if applicable):
-    /// - Perform flattening (AssociativeList::flatten())
-    /// - Remove Identities
-    /// - Propagate Constants (AssociativeList::propagate_constants())
-    /// - Ensure that length of list > 1
-    /// - Ensure that the items are sorted according to Node's Ord implementation (AssociativeList::ensure_ordered())
-    fn from_items(items: &[Node]) -> Node;
+    /// Main constructor.
+    /// Constructor should return normalized node.
+    fn from_items(items: &[Node]) -> Node where Self: Sized {
+        let mut this = Self::construct_self(items);
+        if let Some(result) = this.normalize() {
+            return result;
+        }
+        this.construct_node_variant()
+    }
+
+    /// For example, for Addition: return Node::Addition(self)
+    fn construct_node_variant(self) -> Node;
+    /// For example, for Addition: return Addition { items: items.to_vec() }
+    fn construct_self(items: &[Node]) -> Self;
     fn items(&self) -> &[Node];
 
     fn flatten(&mut self);
     fn propagate_constants(&mut self);
     fn ensure_sorted(&mut self);
     fn simplify(&self) -> Node;
+
+    /// Normalization should (if applicable):
+    /// - Perform flattening (AssociativeList::flatten())
+    /// - Perform identities removal
+    /// - Perform constant propagation (AssociativeList::propagate_constants())
+    /// - Ensure that length of list > 1
+    /// - Ensure that the items are sorted according to Node's Ord implementation (AssociativeList::ensure_ordered())
+    ///
+    /// If None is returned, normalization was successfully performed on &mut self.
+    /// Otherwise, normalization requires changing Node's kind
+    /// (for example, if there is a 0 in multiplication list, the normalization should return Some(Node::Float(0)))
+    #[must_use]
+    fn normalize(&mut self) -> Option<Node>;
 
     // If two lists are of different length, compare them by their length.
     // Otherwise, compare their items in lexicographic order.
@@ -138,36 +158,14 @@ fn propagate_constants_generic(items: &mut Vec<Node>, action: impl Fn(f32, f32) 
     *items = out;
 }
 impl AssociativeList for Addition {
-    fn from_items(items: &[Node]) -> Node {
-        let mut this = Self {
+    fn construct_node_variant(self) -> Node {
+        Node::Addition(self)
+    }
+
+    fn construct_self(items: &[Node]) -> Self {
+        Self {
             items: items.to_vec(),
-        };
-        this.flatten();
-
-        // Clearing identities
-        let mut i = 0;
-        while i < this.items.len() {
-            if let Node::Float(x) = this.items[i]
-                && x == 0.0
-            {
-                this.items.remove(i);
-            } else {
-                i += 1;
-            }
         }
-
-        this.propagate_constants();
-
-        if this.items.len() == 0 {
-            return Node::Float(0.0);
-        }
-        if this.items.len() == 1 {
-            return this.items[0].clone();
-        }
-
-        this.ensure_sorted();
-
-        Node::Addition(this)
     }
 
     fn items(&self) -> &[Node] {
@@ -245,49 +243,48 @@ impl AssociativeList for Addition {
         Self::from_items(items.as_slice())
     }
 
+    fn normalize(&mut self) -> Option<Node> {
+        self.flatten();
+
+        // Clearing identities
+        let mut i = 0;
+        while i < self.items.len() {
+            if let Node::Float(x) = self.items[i]
+                && x == 0.0
+            {
+                self.items.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+
+        self.propagate_constants();
+
+        if self.items.len() == 0 {
+            return Some(Node::Float(0.0));
+        }
+        if self.items.len() == 1 {
+            return Some(self.items[0].clone());
+        }
+
+        self.ensure_sorted();
+        None
+    }
+
     fn symbol(&self) -> &'static str {
         "+"
     }
 }
 
 impl AssociativeList for Multiplication {
-    fn from_items(items: &[Node]) -> Node {
-        let mut this = Self {
+    fn construct_node_variant(self) -> Node {
+        Node::Multiplication(self)
+    }
+
+    fn construct_self(items: &[Node]) -> Self {
+        Self {
             items: items.to_vec(),
-        };
-
-        this.flatten();
-
-        // Clearing identities
-        let mut i = 0;
-        while i < this.items.len() {
-            let mut i_removed = false;
-            if let Node::Float(x) = this.items[i] {
-                if x == 1.0 {
-                    this.items.remove(i);
-                    i_removed = true;
-                }
-                if x == 0.0 {
-                    return Node::Float(0.0);
-                }
-            }
-
-            if !i_removed {
-                i += 1;
-            }
         }
-
-        this.propagate_constants();
-
-        if this.items.len() == 0 {
-            return Node::Float(1.0);
-        }
-        if this.items.len() == 1 {
-            return this.items[0].clone();
-        }
-        this.ensure_sorted();
-
-        Node::Multiplication(this)
     }
 
     fn items(&self) -> &[Node] {
@@ -309,6 +306,40 @@ impl AssociativeList for Multiplication {
     fn simplify(&self) -> Node {
         // todo!()
         Node::Multiplication(self.clone())
+    }
+
+    fn normalize(&mut self) -> Option<Node> {
+        self.flatten();
+
+        // Clearing identities
+        let mut i = 0;
+        while i < self.items.len() {
+            let mut i_removed = false;
+            if let Node::Float(x) = self.items[i] {
+                if x == 1.0 {
+                    self.items.remove(i);
+                    i_removed = true;
+                }
+                if x == 0.0 {
+                    return Some(Node::Float(0.0));
+                }
+            }
+
+            if !i_removed {
+                i += 1;
+            }
+        }
+
+        self.propagate_constants();
+
+        if self.items.len() == 0 {
+            return Some(Node::Float(1.0));
+        }
+        if self.items.len() == 1 {
+            return Some(self.items[0].clone());
+        }
+        self.ensure_sorted();
+        None
     }
 
     fn symbol(&self) -> &'static str {
