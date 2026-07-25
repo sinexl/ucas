@@ -11,6 +11,12 @@ pub enum Node {
     Multiplication(Multiplication),
 }
 
+impl Default for Node {
+    fn default() -> Self {
+        Node::Float(0.0)
+    }
+}
+
 #[derive(Clone)]
 pub struct Addition {
     pub items: Vec<Node>,

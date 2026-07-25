@@ -6,11 +6,8 @@ pub trait AssociativeList {
     /// Main constructor.
     /// Constructor should return normalized node.
     fn from_items(items: &[Node]) -> Node where Self: Sized {
-        let mut this = Self::construct_self(items);
-        if let Some(result) = this.normalize() {
-            return result;
-        }
-        this.construct_node_variant()
+        let this = Self::construct_self(items);
+        this.normalize()
     }
 
     /// For example, for Addition: return Node::Addition(self)
@@ -30,12 +27,9 @@ pub trait AssociativeList {
     /// - Perform constant propagation (AssociativeList::propagate_constants())
     /// - Ensure that length of list > 1
     /// - Ensure that the items are sorted according to Node's Ord implementation (AssociativeList::ensure_ordered())
-    ///
-    /// If None is returned, normalization was successfully performed on &mut self.
-    /// Otherwise, normalization requires changing Node's kind
-    /// (for example, if there is a 0 in multiplication list, the normalization should return Some(Node::Float(0)))
+    /// See `NormalizationResult` for details on returned value
     #[must_use]
-    fn normalize(&mut self) -> Option<Node>;
+    fn normalize(self) -> Node;
 
     // If two lists are of different length, compare them by their length.
     // Otherwise, compare their items in lexicographic order.

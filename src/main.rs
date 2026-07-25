@@ -1,8 +1,7 @@
 mod ast;
 
+use crate::ast::associative::associative_list::{AssociativeList};
 use crate::ast::node::{Addition, Multiplication, Node};
-use std::fmt::{Display, Formatter};
-use crate::ast::associative::associative_list::AssociativeList;
 
 // I decided to not put this implementation into AssociativeList because that would require also
 // adding .action(f32, f32) to the interface.
@@ -71,7 +70,7 @@ impl AssociativeList for Addition {
     }
 
 
-    fn normalize(&mut self) -> Option<Node> {
+    fn normalize(mut self) -> Node {
         self.flatten();
 
         // Clearing identities
@@ -89,14 +88,14 @@ impl AssociativeList for Addition {
         self.propagate_constants();
 
         if self.items.len() == 0 {
-            return Some(Node::Float(0.0));
+            return Node::Float(0.0);
         }
         if self.items.len() == 1 {
-            return Some(self.items[0].clone());
+            return self.items.remove(0); // Move out the vector
         }
 
         self.ensure_sorted();
-        None
+        Node::Addition(self)
     }
 
     fn symbol(&self) -> &'static str {
@@ -130,7 +129,7 @@ impl AssociativeList for Multiplication {
     fn ensure_sorted(&mut self) {
         self.items.sort()
     }
-    fn normalize(&mut self) -> Option<Node> {
+    fn normalize(mut self) -> Node {
         self.flatten();
 
         // Clearing identities
@@ -143,7 +142,7 @@ impl AssociativeList for Multiplication {
                     i_removed = true;
                 }
                 if x == 0.0 {
-                    return Some(Node::Float(0.0));
+                    return Node::Float(0.0);
                 }
             }
 
@@ -155,13 +154,13 @@ impl AssociativeList for Multiplication {
         self.propagate_constants();
 
         if self.items.len() == 0 {
-            return Some(Node::Float(1.0));
+            return Node::Float(1.0);
         }
         if self.items.len() == 1 {
-            return Some(self.items[0].clone());
+            return self.items.remove(0);
         }
         self.ensure_sorted();
-        None
+        Node::Multiplication(self)
     }
 
     fn symbol(&self) -> &'static str {
@@ -201,7 +200,7 @@ fn simplify(expr: &Node) -> Node {
         Node::Multiplication(_) => {
             // todo!()
             expr.clone()
-        },
+        }
         Node::Float(_) => expr.clone(),
         Node::Variable(_) => expr.clone(),
     }
@@ -222,8 +221,8 @@ fn simplify_addition(this: &Addition) -> Node {
                 (
                     Node::Variable(this_name),
                     Node::Multiplication(Multiplication {
-                                             items: multiplicands,
-                                         }),
+                        items: multiplicands,
+                    }),
                 ) => {
                     if let Node::Variable(other_name) = &multiplicands[1]
                         && *other_name == *this_name
