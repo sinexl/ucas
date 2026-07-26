@@ -71,6 +71,9 @@ impl AssociativeList for Addition {
 
 
     fn normalize(mut self) -> Node {
+        for i in &mut self.items {
+            *i = std::mem::take(i).normalize()
+        }
         self.flatten();
 
         // Clearing identities
@@ -130,6 +133,9 @@ impl AssociativeList for Multiplication {
         self.items.sort()
     }
     fn normalize(mut self) -> Node {
+        for i in &mut self.items {
+            *i = std::mem::take(i).normalize()
+        }
         self.flatten();
 
         // Clearing identities
@@ -193,6 +199,16 @@ mod shortcuts {
     }
 }
 
+impl Node {
+    fn normalize(self) -> Node {
+        match self {
+            Node::Float(_) => self,
+            Node::Variable(_) => self,
+            Node::Addition(addition) => addition.normalize(),
+            Node::Multiplication(multiplication) => multiplication.normalize(),
+        }
+    }
+}
 
 fn simplify(expr: &Node) -> Node {
     match expr {
