@@ -1,6 +1,9 @@
 mod ast;
+mod macros;
+#[cfg(test)]
+mod tests;
 
-use crate::ast::associative::associative_list::{AssociativeList};
+use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::{Addition, Multiplication, Node};
 
 // I decided to not put this implementation into AssociativeList because that would require also
@@ -68,7 +71,6 @@ impl AssociativeList for Addition {
     fn ensure_sorted(&mut self) {
         self.items.sort()
     }
-
 
     fn normalize(mut self) -> Node {
         for i in &mut self.items {
@@ -174,31 +176,6 @@ impl AssociativeList for Multiplication {
     }
 }
 
-mod shortcuts {
-    use crate::Node;
-
-    pub fn literal(value: f32) -> Node {
-        Node::Float(value)
-    }
-    pub fn variable(name: &str) -> Node {
-        Node::Variable(name.to_string())
-    }
-
-    #[macro_export]
-    macro_rules! addition {
-        {$($x:expr),+ $(,)?} => {
-            Addition::from_items(&[$($x, )+])
-        }
-    }
-
-    #[macro_export]
-    macro_rules! multiplication {
-        {$($x:expr),+ $(,)?} => {
-            Multiplication::from_items(&[$($x, )+])
-        }
-    }
-}
-
 impl Node {
     fn normalize(self) -> Node {
         match self {
@@ -234,6 +211,13 @@ fn simplify_addition(this: &Addition) -> Node {
         while j < items.len() {
             let mut j_removed = false;
             match (&items[i], &items[j]) {
+                // x + x = 2x
+                (Node::Variable(a), Node::Variable(b)) if a == b => {
+                    let j = items.remove(j);
+                    j_removed = true;
+                    items[i] = multiplication![Node::Float(2.0), j]
+                }
+                // x + nx = (1 + n)x
                 (
                     Node::Variable(this_name),
                     Node::Multiplication(Multiplication {
@@ -244,15 +228,16 @@ fn simplify_addition(this: &Addition) -> Node {
                         && *other_name == *this_name
                     {
                         // x + nx = ((1 + n)*x)
-                        items[i] = Multiplication::from_items(&[
+                        items[i] = multiplication![
                             simplify(&addition![Node::Float(1.0), multiplicands[0].clone()]),
                             Node::Variable(this_name.clone()),
-                        ]);
+                        ];
 
                         items.remove(j);
                         j_removed = true;
                     }
                 }
+                // ax + bx = (a + b)x
                 _ => {}
             }
             if !j_removed {
@@ -266,7 +251,7 @@ fn simplify_addition(this: &Addition) -> Node {
 }
 
 fn main() -> std::io::Result<()> {
-    use shortcuts::*;
+    use macros::*;
     let mut expr = addition! {
         variable("x"),
         literal(1.0),

@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use crate::ast::associative::associative_list::AssociativeList;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Node {
     // TODO: For now, f32 are used. In future, i plan to use arbitrary precision rational numbers
     Float(f32),
@@ -17,11 +17,11 @@ impl Default for Node {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Addition {
     pub items: Vec<Node>,
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Multiplication {
     pub items: Vec<Node>,
 }
