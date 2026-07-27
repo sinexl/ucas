@@ -1,7 +1,7 @@
 mod ast;
-mod macros;
 #[cfg(test)]
 mod tests;
+pub mod util;
 
 use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::{Addition, Multiplication, Node};
@@ -34,9 +34,9 @@ impl AssociativeList for Addition {
         Node::Addition(self)
     }
 
-    fn construct_self(items: &[Node]) -> Self {
+    fn construct_self(items: impl IntoIterator<Item = Node>) -> Self {
         Self {
-            items: items.to_vec(),
+            items: items.into_iter().collect::<Vec<_>>(),
         }
     }
 
@@ -46,18 +46,18 @@ impl AssociativeList for Addition {
 
     fn flatten(&mut self) {
         let mut new_items = Vec::new();
-        for i in &mut self.items {
+        for mut i in self.items.drain(..) {
             match i {
-                Node::Addition(other) => {
+                Node::Addition(mut other) => {
                     other.flatten();
                     new_items.append(&mut other.items)
                 }
-                Node::Multiplication(other) => {
+                Node::Multiplication(ref mut other) => {
                     other.flatten();
-                    new_items.push(i.clone())
+                    new_items.push(i)
                 }
                 Node::Float(_) | Node::Variable(_) => {
-                    new_items.push(i.clone());
+                    new_items.push(i);
                 }
             }
         }
@@ -113,9 +113,9 @@ impl AssociativeList for Multiplication {
         Node::Multiplication(self)
     }
 
-    fn construct_self(items: &[Node]) -> Self {
+    fn construct_self(items: impl IntoIterator<Item = Node>) -> Self {
         Self {
-            items: items.to_vec(),
+            items: items.into_iter().collect::<Vec<_>>(),
         }
     }
 
@@ -200,10 +200,7 @@ fn simplify(expr: &Node) -> Node {
 }
 
 fn simplify_addition(this: &Addition) -> Node {
-    let mut items = this.items.clone();
-    for i in 0..items.len() {
-        items[i] = simplify(&items[i]);
-    }
+    let mut items = this.items.iter().map(simplify).collect::<Vec<_>>();
 
     let mut i = 0;
     while i < items.len() {
@@ -247,11 +244,11 @@ fn simplify_addition(this: &Addition) -> Node {
         i += 1;
     }
 
-    Addition::from_items(items.as_slice())
+    Addition::from_items(items)
 }
 
 fn main() -> std::io::Result<()> {
-    use macros::*;
+    use util::macros::*;
     let mut expr = addition! {
         variable("x"),
         literal(1.0),

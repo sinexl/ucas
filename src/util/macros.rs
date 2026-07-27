@@ -13,12 +13,12 @@ pub fn variable(name: &str) -> Node {
 #[macro_export]
 macro_rules! addition {
     {$($x:expr),+ $(,)?} => {
-        Addition::from_items(&[$($x, )+])
+        Addition::from_items([$($x, )+])
     }
 }
 #[macro_export]
 macro_rules! multiplication {
     {$($x:expr),+ $(,)?} => {
-        Multiplication::from_items(&[$($x, )+])
+        Multiplication::from_items([$($x, )+])
     }
 }

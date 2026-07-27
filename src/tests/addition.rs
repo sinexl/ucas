@@ -1,7 +1,7 @@
 use crate::Multiplication;
 use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::Node;
-use crate::macros::{literal, variable};
+use crate::util::macros::{literal, variable};
 use crate::{Addition, multiplication};
 use crate::{addition, simplify};
 
@@ -89,7 +89,7 @@ fn constant_prop() {
 
 #[test]
 fn identity_clear() {
-    assert_eq!(Addition::from_items(&[]), Node::Float(0.0));
+    assert_eq!(Addition::from_items([]), Node::Float(0.0));
 
     let x = Node::Float(39.0);
     assert_eq!(addition!(x.clone()), x);

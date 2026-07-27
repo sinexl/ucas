@@ -1,11 +1,12 @@
+use crate::ast::node::Node;
+use crate::util;
 use std::cmp::Ordering;
 use std::fmt::Formatter;
-use crate::ast::node::Node;
 
 pub trait AssociativeList {
     /// Main constructor.
     /// Constructor should return normalized node.
-    fn from_items(items: &[Node]) -> Node where Self: Sized {
+    fn from_items(items: impl IntoIterator<Item = Node>) -> Node where Self: Sized {
         let this = Self::construct_self(items);
         this.normalize()
     }
@@ -13,7 +14,7 @@ pub trait AssociativeList {
     /// For example, for Addition: return Node::Addition(self)
     fn construct_node_variant(self) -> Node;
     /// For example, for Addition: return Addition { items: items.to_vec() }
-    fn construct_self(items: &[Node]) -> Self;
+    fn construct_self(items: impl IntoIterator<Item = Node>) -> Self;
 
     fn items(&self) -> &[Node];
 
@@ -41,9 +42,8 @@ pub trait AssociativeList {
             return length_order;
         }
 
-        let is_sorted = |arr: &[Node]| arr.windows(2).all(|w| w[0] <= w[1]);
-        debug_assert!(is_sorted(self.items()));
-        debug_assert!(is_sorted(other.items()));
+        debug_assert!(util::is_sorted(self.items()));
+        debug_assert!(util::is_sorted(other.items()));
 
         self.items().cmp(other.items())
     }
