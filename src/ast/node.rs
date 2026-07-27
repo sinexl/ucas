@@ -5,7 +5,7 @@ use crate::ast::associative::associative_list::AssociativeList;
 pub enum Node {
     // TODO: For now, f32 are used. In future, i plan to use arbitrary precision rational numbers
     Float(f32),
-    Variable(String),
+    Variable(Variable),
 
     Addition(Addition),
     Multiplication(Multiplication),
@@ -24,6 +24,17 @@ pub struct Addition {
 #[derive(Debug, Clone)]
 pub struct Multiplication {
     pub items: Vec<Node>,
+}
+
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct Variable {
+    pub name: String,
+}
+
+impl Display for Variable{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 impl Display for Node {

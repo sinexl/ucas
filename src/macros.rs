@@ -1,10 +1,13 @@
 use crate::Node;
+use crate::ast::node::Variable;
 
 pub fn literal(value: f32) -> Node {
     Node::Float(value)
 }
 pub fn variable(name: &str) -> Node {
-    Node::Variable(name.to_string())
+    Node::Variable(Variable {
+        name: name.to_string(),
+    })
 }
 
 #[macro_export]
