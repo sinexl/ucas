@@ -39,7 +39,7 @@ fn flattening() {
     // (a + (b * (h * (i + (j + (a + b))))) + (c + d + (e + (f + g))
     // = a + (b * (h * (i + j + a + b))) + c + d + e + f + g
     assert_eq!(
-        run(addition!(
+        addition!(
             addition!(
                 a.clone(),
                 multiplication!(
@@ -48,8 +48,8 @@ fn flattening() {
                 )
             ),
             addition!(c, d, addition!(e, addition!(f, g)))
-        )),
-        "(a + c + d + e + f + g + (b * (h * (a + b + i + j))))"
+        ).to_string(),
+        "(a + c + d + e + f + g + (b * h * (a + b + i + j)))"
     )
 }
 

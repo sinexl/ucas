@@ -124,7 +124,25 @@ impl AssociativeList for Multiplication {
     }
 
     fn flatten(&mut self) {
-        // todo!()
+        let mut new_items = Vec::new();
+
+        for mut i in self.items.drain(..) {
+            match i {
+                Node::Multiplication(ref mut other) => {
+                    other.flatten();
+                    new_items.append(&mut other.items)
+                }
+
+                Node::Float(_) | Node::Variable(_) => new_items.push(i),
+                Node::Addition(ref mut addition) => {
+                    // Distributive rule is not applied here.
+                    addition.flatten();
+                    new_items.push(i)
+                }
+            }
+        }
+
+        self.items = new_items;
     }
 
     fn propagate_constants(&mut self) {
@@ -190,13 +208,46 @@ impl Node {
 fn simplify(expr: &Node) -> Node {
     match expr {
         Node::Addition(addition) => simplify_addition(addition),
-        Node::Multiplication(_) => {
-            // todo!()
-            expr.clone()
+        Node::Multiplication(multiplication) => {
+            simplify_multiplication(multiplication)
         }
         Node::Float(_) => expr.clone(),
         Node::Variable(_) => expr.clone(),
     }
+}
+
+fn distribute(items: &[Node], addition: &Addition, addition_idx: usize) -> Node {
+    // Select all items except for the addition into which everything will be distributed.
+    let to_distribute = items
+        .iter()
+        .enumerate()
+        .filter(|&(i, _)| i != addition_idx)
+        .map(|(_, item)| item)
+        .cloned();
+
+    let mut items = Vec::with_capacity(addition.items.len());
+    for i in &addition.items {
+        let multiplication_items =
+            to_distribute
+                .clone()
+                .chain(std::iter::once(i.clone()));
+        let multiplication = Multiplication::from_items(
+            multiplication_items,
+        );
+        items.push(simplify(&multiplication));
+    }
+
+    Addition::from_items(items)
+}
+fn simplify_multiplication(this: &Multiplication) -> Node {
+    let items = this.items.iter().map(simplify).collect::<Vec<_>>();
+    for (idx, i) in items.iter().enumerate() {
+        if let Node::Addition(addition) = i {
+            return distribute(&items, addition, idx);
+        }
+    }
+    // todo: other simplifications
+    Node::Multiplication(this.clone())
 }
 
 fn simplify_addition(this: &Addition) -> Node {
@@ -249,14 +300,17 @@ fn simplify_addition(this: &Addition) -> Node {
 
 fn main() -> std::io::Result<()> {
     use util::macros::*;
-    let mut expr = addition! {
-        variable("x"),
-        literal(1.0),
-        multiplication! { literal(2.0), variable("x") },
-        literal(2.0),
-
-        variable("y"),
-        multiplication! { literal(6.0), variable("y") },
+    let a = variable("a");
+    let b = variable("b");
+    let c = variable("c");
+    let d = variable("d");
+    let e = variable("e");
+    let f = variable("f");
+    // let mut expr = multiplication![a, addition!(b, c)];
+    let mut expr = multiplication!{
+        addition!(a, b),
+        addition!(c, d),
+        addition!(e, f),
     };
     print!("{expr} = \n\t");
 
