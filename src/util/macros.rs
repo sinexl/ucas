@@ -22,3 +22,12 @@ macro_rules! multiplication {
         Multiplication::from_items([$($x, )+])
     }
 }
+
+#[macro_export]
+macro_rules! vars{
+    ( $( $name:expr ),+ $(,)?) => {
+        (
+            $(crate::util::macros::variable(stringify!($name))),*
+        )
+    }
+}

@@ -208,9 +208,7 @@ impl Node {
 fn simplify(expr: &Node) -> Node {
     match expr {
         Node::Addition(addition) => simplify_addition(addition),
-        Node::Multiplication(multiplication) => {
-            simplify_multiplication(multiplication)
-        }
+        Node::Multiplication(multiplication) => simplify_multiplication(multiplication),
         Node::Float(_) => expr.clone(),
         Node::Variable(_) => expr.clone(),
     }
@@ -227,13 +225,8 @@ fn distribute(items: &[Node], addition: &Addition, addition_idx: usize) -> Node 
 
     let mut items = Vec::with_capacity(addition.items.len());
     for i in &addition.items {
-        let multiplication_items =
-            to_distribute
-                .clone()
-                .chain(std::iter::once(i.clone()));
-        let multiplication = Multiplication::from_items(
-            multiplication_items,
-        );
+        let multiplication_items = to_distribute.clone().chain(std::iter::once(i.clone()));
+        let multiplication = Multiplication::from_items(multiplication_items);
         items.push(simplify(&multiplication));
     }
 
@@ -300,14 +293,9 @@ fn simplify_addition(this: &Addition) -> Node {
 
 fn main() -> std::io::Result<()> {
     use util::macros::*;
-    let a = variable("a");
-    let b = variable("b");
-    let c = variable("c");
-    let d = variable("d");
-    let e = variable("e");
-    let f = variable("f");
+    let (a, b, c, d, e, f) = vars!(a, b, c, d, e, f);
     // let mut expr = multiplication![a, addition!(b, c)];
-    let mut expr = multiplication!{
+    let mut expr = multiplication! {
         addition!(a, b),
         addition!(c, d),
         addition!(e, f),
