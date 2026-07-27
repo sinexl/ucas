@@ -1,5 +1,5 @@
-use crate::Node;
 use crate::ast::node::Variable;
+use crate::Node;
 
 pub fn literal(value: f32) -> Node {
     Node::Float(value)
@@ -12,15 +12,17 @@ pub fn variable(name: &str) -> Node {
 
 #[macro_export]
 macro_rules! addition {
-    {$($x:expr),+ $(,)?} => {
-        Addition::from_items([$($x, )+])
-    }
+    {$($x:expr),+ $(,)?} => {{
+        use crate::ast::associative::associative_list::AssociativeList;
+        crate::ast::node::Addition::from_items([$($x, )+])
+    }}
 }
 #[macro_export]
 macro_rules! multiplication {
-    {$($x:expr),+ $(,)?} => {
-        Multiplication::from_items([$($x, )+])
-    }
+    {$($x:expr),+ $(,)?} => {{
+        use crate::ast::associative::associative_list::AssociativeList;
+        crate::ast::node::Multiplication::from_items([$($x, )+])
+    }}
 }
 
 #[macro_export]

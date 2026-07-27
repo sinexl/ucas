@@ -1,13 +1,14 @@
-use crate::Multiplication;
+use crate::addition;
 use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::Node;
+use crate::tests::helper::run;
 use crate::util::macros::{literal, variable};
-use crate::{Addition, multiplication};
-use crate::{addition, simplify};
+use crate::vars;
+use crate::{multiplication, Addition};
 
 #[test]
 fn x_plus_x() {
-    let x = variable("x");
+    let x = vars!(x);
     assert_eq!(run(addition!(x.clone(), x.clone())), "(2 * x)")
 }
 
@@ -25,16 +26,7 @@ fn x_minus_x() {
 
 #[test]
 fn flattening() {
-    let a = variable("a");
-    let b = variable("b");
-    let c = variable("c");
-    let d = variable("d");
-    let e = variable("e");
-    let f = variable("f");
-    let g = variable("g");
-    let h = variable("h");
-    let i = variable("i");
-    let j = variable("j");
+    let (a, b, c, d, e, f, g, h, i, j) = vars!(a, b, c, d, e, f, g, h, i, j);
 
     // (a + (b * (h * (i + (j + (a + b))))) + (c + d + (e + (f + g))
     // = a + (b * (h * (i + j + a + b))) + c + d + e + f + g
@@ -48,15 +40,15 @@ fn flattening() {
                 )
             ),
             addition!(c, d, addition!(e, addition!(f, g)))
-        ).to_string(),
+        )
+        .to_string(),
         "(a + c + d + e + f + g + (b * h * (a + b + i + j)))"
     )
 }
 
 #[test]
 fn x_plus_nx() {
-    let x = variable("x");
-    let y = variable("y");
+    let (x, y) = vars!(x, y);
     // 2x + 1 + x + 2 + y + 6y
     assert_eq!(
         run(addition! {
@@ -93,8 +85,4 @@ fn identity_clear() {
 
     let x = Node::Float(39.0);
     assert_eq!(addition!(x.clone()), x);
-}
-
-fn run(expr: Node) -> String {
-    simplify(&expr).to_string()
 }

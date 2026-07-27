@@ -292,7 +292,6 @@ fn simplify_addition(this: &Addition) -> Node {
 }
 
 fn main() -> std::io::Result<()> {
-    use util::macros::*;
     let (a, b, c, d, e, f) = vars!(a, b, c, d, e, f);
     // let mut expr = multiplication![a, addition!(b, c)];
     let mut expr = multiplication! {

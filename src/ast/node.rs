@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use crate::ast::associative::associative_list::AssociativeList;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
 pub enum Node {

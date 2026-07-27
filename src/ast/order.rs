@@ -1,6 +1,6 @@
-use std::cmp::Ordering;
 use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::Node;
+use std::cmp::Ordering;
 
 /// A quick reminder of rust binary relations: weakest to strongest
 /// PartialEq: not equivalence relation, like Eq but not necessarily reflexive.
