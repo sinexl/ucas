@@ -1,7 +1,7 @@
 use crate::ast::node::Variable;
 use crate::Node;
 
-pub fn literal(value: f32) -> Node {
+pub fn number(value: f32) -> Node {
     Node::Float(value)
 }
 pub fn variable(name: &str) -> Node {
@@ -32,4 +32,13 @@ macro_rules! vars{
             $(crate::util::macros::variable(stringify!($name))),*
         )
     }
+}
+
+#[macro_export]
+macro_rules! minmax {
+    ($a:expr, $b:expr) => {{
+        let l_ = $a;
+        let r_ = $b;
+        if l_ < r_ { (l_, r_) } else { (r_, l_) }
+    }};
 }

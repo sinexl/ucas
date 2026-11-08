@@ -24,11 +24,10 @@ pub trait AssociativeList {
 
     /// Normalization should (if applicable):
     /// - Perform flattening (AssociativeList::flatten())
-    /// - Perform identities removal
+    /// - Remove identities
     /// - Perform constant propagation (AssociativeList::propagate_constants())
-    /// - Ensure that length of list > 1
+    /// - Ensure that length of list > 1. If not, return its only item.
     /// - Ensure that the items are sorted according to Node's Ord implementation (AssociativeList::ensure_ordered())
-    /// See `NormalizationResult` for details on returned value
     #[must_use]
     fn normalize(self) -> Node;
 

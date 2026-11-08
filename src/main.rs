@@ -4,7 +4,9 @@ mod tests;
 pub mod util;
 
 use crate::ast::associative::associative_list::AssociativeList;
-use crate::ast::node::{Addition, Multiplication, Node};
+use crate::ast::node::{Addition, Multiplication, Node, Variable};
+use crate::util::macros::number;
+use std::iter;
 
 // I decided to not put this implementation into AssociativeList because that would require also
 // adding .action(f32, f32) to the interface.
@@ -225,7 +227,7 @@ fn distribute(items: &[Node], addition: &Addition, addition_idx: usize) -> Node 
 
     let mut items = Vec::with_capacity(addition.items.len());
     for i in &addition.items {
-        let multiplication_items = to_distribute.clone().chain(std::iter::once(i.clone()));
+        let multiplication_items = to_distribute.clone().chain(iter::once(i.clone()));
         let multiplication = Multiplication::from_items(multiplication_items);
         items.push(simplify(&multiplication));
     }
@@ -236,11 +238,77 @@ fn simplify_multiplication(this: &Multiplication) -> Node {
     let items = this.items.iter().map(simplify).collect::<Vec<_>>();
     for (idx, i) in items.iter().enumerate() {
         if let Node::Addition(addition) = i {
-            return distribute(&items, addition, idx);
+            return simplify(&distribute(&items, addition, idx));
         }
     }
     // todo: other simplifications
     Node::Multiplication(this.clone())
+}
+
+fn match_similar_monomials_multiplication<'a>(
+    left: &'a Multiplication,
+    right: &'a Multiplication,
+) -> Option<(f32, f32, Vec<Node>)> {
+    let mut l_idx = 0;
+    let mut r_idx = 0;
+
+    let a = if let Node::Float(a) = left.items[0] {
+        l_idx = 1;
+        a
+    } else {
+        1.0
+    };
+    let b = if let Node::Float(b) = right.items[0] {
+        r_idx = 1;
+        b
+    } else {
+        1.0
+    };
+
+    let left_variables = &left.items[l_idx..];
+    let right_variables = &right.items[r_idx..];
+    if left_variables == right_variables {
+        return Some((
+            a,
+            b,
+            left_variables.into_iter().cloned().collect::<Vec<_>>(),
+        ));
+    }
+    None
+}
+
+// matches if two multiplication terms are of form:
+// left: a*xyzw..., right: b*xyzw.., (monomials) where a and b are numbers, xyzw... are variables.
+// If yes, returns pair (a, b) and list of variables xyzw...
+
+fn match_similar_monomials<'a>(left: &'a Node, right: &'a Node) -> Option<(f32, f32, Vec<Node>)> {
+    // possible cases:
+    // Var + Var
+    // Var + n * Var
+    // a*Var + b*VarList
+
+    let (left, right) = minmax!(left, right);
+    match (left, right) {
+        (Node::Variable(a), Node::Variable(b)) => {
+            if a == b {
+                return Some((1.0, 1.0, vec![Node::Variable(a.clone())]));
+            }
+            None
+        }
+        (Node::Variable(a), Node::Multiplication(multiplication)) => {
+            match_similar_monomials_multiplication(
+                &Multiplication::construct_self([Node::Variable(a.clone())]),
+                multiplication,
+            )
+        }
+        (Node::Multiplication(l), Node::Multiplication(r)) => {
+            match_similar_monomials_multiplication(l, r)
+        }
+        (Node::Float(_), _) => None,
+        (Node::Addition(_), _) => None,
+        (Node::Variable(_), _) => None,
+        (&Node::Multiplication(_), _) => None,
+    }
 }
 
 fn simplify_addition(this: &Addition) -> Node {
@@ -251,35 +319,11 @@ fn simplify_addition(this: &Addition) -> Node {
         let mut j = i + 1;
         while j < items.len() {
             let mut j_removed = false;
-            match (&items[i], &items[j]) {
-                // x + x = 2x
-                (Node::Variable(a), Node::Variable(b)) if a == b => {
-                    let j = items.remove(j);
-                    j_removed = true;
-                    items[i] = multiplication![Node::Float(2.0), j]
-                }
-                // x + nx = (1 + n)x
-                (
-                    Node::Variable(this_name),
-                    Node::Multiplication(Multiplication {
-                        items: multiplicands,
-                    }),
-                ) => {
-                    if let Node::Variable(other_name) = &multiplicands[1]
-                        && *other_name == *this_name
-                    {
-                        // x + nx = ((1 + n)*x)
-                        items[i] = multiplication![
-                            simplify(&addition![Node::Float(1.0), multiplicands[0].clone()]),
-                            Node::Variable(this_name.clone()),
-                        ];
-
-                        items.remove(j);
-                        j_removed = true;
-                    }
-                }
-                // ax + bx = (a + b)x
-                _ => {}
+            // a*xyzw... + b*xyzw... = (a + b)*xyzw...
+            if let Some((a, b, vars)) = match_similar_monomials(&items[i], &items[j]) {
+                items.remove(j);
+                j_removed = true;
+                items[i] = Multiplication::from_items(iter::once(number(a + b)).chain(vars));
             }
             if !j_removed {
                 j += 1;
@@ -292,17 +336,19 @@ fn simplify_addition(this: &Addition) -> Node {
 }
 
 fn main() -> std::io::Result<()> {
-    let (a, b, c, d, e, f) = vars!(a, b, c, d, e, f);
-    // let mut expr = multiplication![a, addition!(b, c)];
-    let mut expr = multiplication! {
-        addition!(a, b),
-        addition!(c, d),
-        addition!(e, f),
-    };
-    print!("{expr} = \n\t");
 
-    expr = simplify(&expr);
+    let (x, y) = vars!(x, y);
+    let expr = simplify(&multiplication!(
+        addition!(x.clone(), y.clone()),
+        addition!(y.clone(), x.clone()),
+        // addition!(y.clone(), x.clone()),
+    ));
+    println!("{}", expr);
+    let expr = simplify(&addition!(
+        multiplication!(x.clone(), y.clone()),
+        multiplication!(y.clone(), x.clone(), number(2.0))
+    ));
+    println!("{}", expr);
 
-    println!("{expr}");
     Ok(())
 }

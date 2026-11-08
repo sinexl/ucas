@@ -1,5 +1,5 @@
 use crate::tests::helper::run;
-use crate::util::macros::literal;
+use crate::util::macros::number;
 use crate::{addition, multiplication, vars};
 
 #[test]
@@ -7,13 +7,13 @@ fn distributive() {
     // Some cases with constats just in case,
     let (a, b) = vars!(a, b);
     assert_eq!(
-        run(multiplication!(literal(2.0), addition!(a, b))),
+        run(multiplication!(number(2.0), addition!(a, b))),
         "((2 * a) + (2 * b))"
     );
 
     let (a, b, c) = vars!(a, b, c);
     assert_eq!(
-        run(multiplication!(addition!(a, b), literal(3.0), c)),
+        run(multiplication!(addition!(a, b), number(3.0), c)),
         "((3 * a * c) + (3 * b * c))"
     );
 

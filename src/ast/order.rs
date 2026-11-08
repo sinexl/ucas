@@ -1,5 +1,5 @@
 use crate::ast::associative::associative_list::AssociativeList;
-use crate::ast::node::Node;
+use crate::ast::node::{Addition, Multiplication, Node};
 use std::cmp::Ordering;
 
 /// A quick reminder of rust binary relations: weakest to strongest
@@ -37,18 +37,43 @@ impl Ord for Node {
             Node::Multiplication(a) => match other {
                 Node::Float(_) | Node::Variable(_) => Ordering::Greater,
 
-                Node::Multiplication(b) => a.default_cmp(b),
+                Node::Multiplication(b) => a.cmp(b),
 
                 Node::Addition(_) => Ordering::Less,
             },
             Node::Addition(a) => match other {
                 Node::Float(_) | Node::Variable(_) | Node::Multiplication(_) => Ordering::Greater,
 
-                Node::Addition(b) => a.default_cmp(b),
+                Node::Addition(b) => a.cmp(b),
             },
         }
     }
 }
+
+macro_rules! define_order {
+    ($name:ident, $f:expr) => {
+        impl Ord for $name {
+            fn cmp(&self, other: &Self) -> Ordering {
+                $f(self, other)
+            }
+        }
+
+        impl PartialOrd for $name {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl Eq for $name { }
+        impl  PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                self == other
+            }
+        }
+    };
+}
+
+define_order!(Multiplication, AssociativeList::default_cmp);
+define_order!(Addition, AssociativeList::default_cmp);
 
 impl PartialOrd<Self> for Node {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {

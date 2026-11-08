@@ -2,7 +2,7 @@ use crate::addition;
 use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::Node;
 use crate::tests::helper::run;
-use crate::util::macros::{literal, variable};
+use crate::util::macros::{number, variable};
 use crate::vars;
 use crate::{multiplication, Addition};
 
@@ -52,20 +52,20 @@ fn x_plus_nx() {
     // 2x + 1 + x + 2 + y + 6y
     assert_eq!(
         run(addition! {
-            multiplication! { literal(2.0), x.clone() },
-            literal(1.0),
+            multiplication! { number(2.0), x.clone() },
+            number(1.0),
             x.clone(),
-            literal(2.0),
+            number(2.0),
 
             y.clone(),
-            multiplication! { literal(6.0), y.clone() },
+            multiplication! { number(6.0), y.clone() },
         }),
         "(3 + (3 * x) + (7 * y))"
     );
 }
 #[test]
 fn constant_prop() {
-    let l = |x| literal(x as f32);
+    let l = |x| number(x as f32);
     let x = variable("a");
     assert_eq!(
         run(addition!(
