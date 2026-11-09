@@ -1,10 +1,11 @@
 use crate::addition;
+use crate::ast::addition::Addition;
 use crate::ast::associative::associative_list::AssociativeList;
 use crate::ast::node::Node;
 use crate::tests::helper::run;
 use crate::util::macros::{number, variable};
 use crate::vars;
-use crate::{Addition, multiplication};
+use crate::multiplication;
 
 #[test]
 fn x_plus_x() {

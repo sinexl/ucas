@@ -1,4 +1,6 @@
+use crate::ast::addition::Addition;
 use crate::ast::associative::associative_list::AssociativeList;
+use crate::ast::multiplication::Multiplication;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
@@ -17,14 +19,6 @@ impl Default for Node {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Addition {
-    pub items: Vec<Node>,
-}
-#[derive(Debug, Clone)]
-pub struct Multiplication {
-    pub items: Vec<Node>,
-}
 
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Variable {

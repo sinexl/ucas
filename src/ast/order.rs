@@ -1,5 +1,4 @@
-use crate::ast::associative::associative_list::AssociativeList;
-use crate::ast::node::{Addition, Multiplication, Node};
+use crate::ast::node::Node;
 use std::cmp::Ordering;
 
 /// A quick reminder of rust binary relations: weakest to strongest
@@ -50,6 +49,7 @@ impl Ord for Node {
     }
 }
 
+#[macro_export]
 macro_rules! define_order {
     ($name:ident, $f:expr) => {
         impl Ord for $name {
@@ -72,8 +72,6 @@ macro_rules! define_order {
     };
 }
 
-define_order!(Multiplication, AssociativeList::default_cmp);
-define_order!(Addition, AssociativeList::default_cmp);
 
 impl PartialOrd<Self> for Node {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
