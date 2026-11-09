@@ -4,7 +4,7 @@ mod tests;
 pub mod util;
 
 use crate::ast::associative::associative_list::AssociativeList;
-use crate::ast::node::{Addition, Multiplication, Node, Variable};
+use crate::ast::node::{Addition, Multiplication, Node};
 use crate::util::macros::number;
 use std::iter;
 

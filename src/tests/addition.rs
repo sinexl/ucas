@@ -4,7 +4,7 @@ use crate::ast::node::Node;
 use crate::tests::helper::run;
 use crate::util::macros::{number, variable};
 use crate::vars;
-use crate::{multiplication, Addition};
+use crate::{Addition, multiplication};
 
 #[test]
 fn x_plus_x() {
@@ -63,6 +63,38 @@ fn x_plus_nx() {
         "(3 + (3 * x) + (7 * y))"
     );
 }
+
+#[test]
+fn similar_terms() {
+    // Possible cases:
+    // VarList + VarList
+    // VarList + n*VarList
+    // a*VarList + b*VarList
+    let (x, y) = vars!(x, y);
+    assert_eq!(
+        run(addition!(
+            multiplication!(x.clone(), y.clone()),
+            multiplication!(y.clone(), x.clone())
+        )),
+        "(2 * x * y)"
+    );
+    assert_eq!(
+        run(addition!(
+            multiplication!(multiplication!(y.clone(), x.clone()), number(5.0)),
+            multiplication!(x.clone(), y.clone()),
+        )),
+        "(6 * x * y)"
+    );
+
+    assert_eq!(
+        run(addition!(
+            multiplication!(multiplication!(y.clone(), x.clone()), number(5.0)),
+            multiplication!(multiplication!(y.clone(), x.clone()), number(5.0))
+        )),
+        "(10 * x * y)"
+    );
+}
+
 #[test]
 fn constant_prop() {
     let l = |x| number(x as f32);

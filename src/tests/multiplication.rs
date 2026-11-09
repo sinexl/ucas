@@ -92,3 +92,68 @@ fn basic_flattening() {
         "((a * c) + (b * c))"
     );
 }
+
+#[test]
+fn polynomial_expansion() {
+    let (x, y, z, w) = vars!(x, y, z, w);
+    let xyz = addition!(x, y, z);
+    let xyzw = addition!(xyz.clone(), w);
+    assert_eq!(
+        run(multiplication!(xyz.clone(), xyz.clone(), xyz.clone())),
+        "((x * x * x) + (y * y * y) + (z * z * z) + (3 * x * x * y) + (3 * x * x * z) + (3 * x * y * y) + (3 * x * z * z) + (3 * y * y * z) + (3 * y * z * z) + (6 * x * y * z))"
+    );
+
+    assert_eq!(
+        run(multiplication!(xyzw.clone(), xyzw.clone())),
+        "((w * w) + (x * x) + (y * y) + (z * z) + (2 * w * x) + (2 * w * y) + (2 * w * z) + (2 * x * y) + (2 * x * z) + (2 * y * z))"
+    )
+}
+
+#[test]
+fn binomial_expansion() {
+    let (x, y) = vars!(x, y);
+    let x_plus_y = addition!(x, y);
+    // (x + y)^2
+    assert_eq!(
+        run(multiplication!(x_plus_y.clone(), x_plus_y.clone())),
+        "((x * x) + (y * y) + (2 * x * y))"
+    );
+
+    // (x + y)^3
+    assert_eq!(
+        run(multiplication!(
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone()
+        )),
+        "((x * x * x) + (y * y * y) + (3 * x * x * y) + (3 * x * y * y))"
+    );
+
+    // (x + y)^4
+    assert_eq!(
+        run(multiplication!(
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone()
+        )),
+        "((x * x * x * x) + (y * y * y * y) + (4 * x * x * x * y) + (4 * x * y * y * y) + (6 * x * x * y * y))"
+    );
+
+    // (x + y)^10 just for fun
+    assert_eq!(
+        run(multiplication!(
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+            x_plus_y.clone(),
+        )),
+        "((x * x * x * x * x * x * x * x * x * x) + (y * y * y * y * y * y * y * y * y * y) + (10 * x * x * x * x * x * x * x * x * x * y) + (10 * x * y * y * y * y * y * y * y * y * y) + (45 * x * x * x * x * x * x * x * x * y * y) + (45 * x * x * y * y * y * y * y * y * y * y) + (120 * x * x * x * x * x * x * x * y * y * y) + (120 * x * x * x * y * y * y * y * y * y * y) + (210 * x * x * x * x * x * x * y * y * y * y) + (210 * x * x * x * x * y * y * y * y * y * y) + (252 * x * x * x * x * x * y * y * y * y * y))"
+    );
+}
